@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { spaceApi } from '../../services/spaceApi';
+import { useAuthStore } from '../../store/authStore';
 
 interface JoinTeamViewProps {
   onViewChange: (view: 'join' | 'create' | 'analyzing') => void;
@@ -10,11 +11,12 @@ interface JoinTeamViewProps {
 const ROLES = ['Frontend', 'Backend', 'Fullstack', 'Data', 'PM', 'Design'];
 
 export function JoinTeamView({ onViewChange }: JoinTeamViewProps) {
-  const [teamCode, setTeamCode] = useState('');
+  const [teamCode, setTeamCodeInput] = useState('');
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const navigate = useNavigate();
+  const setTeamCode = useAuthStore((state) => state.setTeamCode);
 
   const handleJoin = async () => {
     if (!teamCode || !selectedRole) return;
@@ -23,6 +25,7 @@ export function JoinTeamView({ onViewChange }: JoinTeamViewProps) {
     setErrorMsg('');
     try {
       await spaceApi.joinSpace(teamCode);
+      setTeamCode(teamCode);
       // 백엔드 합류 성공 후 직무 기반 메인뷰로 이동
       navigate('/functional');
     } catch (error: any) {
@@ -45,9 +48,11 @@ export function JoinTeamView({ onViewChange }: JoinTeamViewProps) {
           <input
             type="text"
             value={teamCode}
-            onChange={(e) => setTeamCode(e.target.value)}
+            onChange={(e) => setTeamCodeInput(e.target.value)}
             placeholder="e.g. X8J9-2KPL"
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-colors"
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-colors uppercase"
+            maxLength={8}
+            disabled={isLoading}
           />
         </div>
 

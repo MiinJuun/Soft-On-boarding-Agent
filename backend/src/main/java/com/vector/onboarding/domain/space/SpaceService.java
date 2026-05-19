@@ -78,6 +78,10 @@ public class SpaceService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found: " + userId));
 
+        if (spaceMemberRepository.existsBySpaceIdAndUserId(space.getId(), userId)) {
+            throw new IllegalArgumentException("이미 참여한 팀 스페이스입니다.");
+        }
+
         // MEMBER 역할로 SpaceMember 등록
         SpaceMember member = SpaceMember.builder()
                 .spaceId(space.getId())

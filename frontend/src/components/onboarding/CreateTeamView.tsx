@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Sparkles, Loader2 } from 'lucide-react';
 import { spaceApi } from '../../services/spaceApi';
+import { useAuthStore } from '../../store/authStore';
 
 const GithubIcon = ({ className }: { className?: string }) => (
   <svg
@@ -29,6 +30,7 @@ export function CreateTeamView({ onViewChange }: CreateTeamViewProps) {
   const [repoUrl, setRepoUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const setTeamCode = useAuthStore((state) => state.setTeamCode);
 
   const handleCreate = async () => {
     if (!teamName || !repoUrl) return;
@@ -36,7 +38,8 @@ export function CreateTeamView({ onViewChange }: CreateTeamViewProps) {
     setIsLoading(true);
     setErrorMsg('');
     try {
-      await spaceApi.createSpace({ name: teamName, repoUrl });
+      const response = await spaceApi.createSpace({ name: teamName, repoUrl });
+      setTeamCode(response.teamCode);
       onViewChange('analyzing');
     } catch (error: any) {
       setErrorMsg(error.message || '오류가 발생했습니다.');
