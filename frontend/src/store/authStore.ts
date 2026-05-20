@@ -7,7 +7,7 @@ interface AuthState {
   user: { teamCode: string | null } | null;
   login: (token: string, user?: { teamCode: string | null }) => void;
   logout: () => void;
-  setTeamCode: (teamCode: string) => void;
+  setTeamCode: (teamCode: string | null) => void;
 }
 
 export const useAuthStore = create<AuthState>()(

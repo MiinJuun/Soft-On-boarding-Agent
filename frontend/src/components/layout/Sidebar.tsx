@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   Blocks, 
@@ -7,9 +8,11 @@ import {
   MessageSquare, 
   Settings, 
   ChevronRight,
-  LogOut
+  LogOut,
+  User
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { userApi, type UserProfileResponse } from '../../services/userApi';
 
 const navigation = [
   { name: 'Functional', href: '/functional', icon: Blocks },
@@ -21,6 +24,19 @@ const navigation = [
 export function Sidebar() {
   const navigate = useNavigate();
   const logout = useAuthStore((state) => state.logout);
+  const [profile, setProfile] = useState<UserProfileResponse | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await userApi.getProfile();
+        setProfile(data);
+      } catch (error) {
+        console.error('Failed to load profile in sidebar', error);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -31,18 +47,22 @@ export function Sidebar() {
     <div className="flex flex-col w-64 h-screen bg-gray-50 border-r border-gray-200">
       {/* Profile Section */}
       <div className="p-6">
-        <div className="flex items-center justify-between cursor-pointer group">
+        <div className="flex items-center justify-between cursor-pointer group" onClick={() => navigate('/settings')}>
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden flex-shrink-0">
-              <img 
-                src="https://api.dicebear.com/7.x/notionists/svg?seed=Felix" 
-                alt="Profile" 
-                className="w-full h-full object-cover"
-              />
+            <div className="w-10 h-10 rounded-full bg-gray-300 overflow-hidden flex-shrink-0 flex items-center justify-center text-gray-500">
+              {profile ? (
+                <User size={20} />
+              ) : (
+                <div className="animate-pulse bg-gray-400 w-full h-full"></div>
+              )}
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">김민수</h2>
-              <p className="text-xs text-gray-500">Frontend Developer</p>
+              <h2 className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                {profile ? profile.userName : 'Loading...'}
+              </h2>
+              <p className="text-xs text-gray-500">
+                {profile ? (profile.role || 'No Team') : '...'}
+              </p>
             </div>
           </div>
           <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />

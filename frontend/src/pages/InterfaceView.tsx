@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   Folder, FileCode2, Palette, Box, Search,
   ChevronDown, ChevronRight, BookOpen, GitCommit, GitPullRequest, Clock

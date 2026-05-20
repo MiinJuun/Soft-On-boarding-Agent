@@ -24,7 +24,7 @@ export function JoinTeamView({ onViewChange }: JoinTeamViewProps) {
     setIsLoading(true);
     setErrorMsg('');
     try {
-      await spaceApi.joinSpace(teamCode);
+      await spaceApi.joinSpace(teamCode, selectedRole);
       setTeamCode(teamCode);
       // 백엔드 합류 성공 후 직무 기반 메인뷰로 이동
       navigate('/functional');

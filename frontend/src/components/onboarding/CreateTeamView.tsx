@@ -25,20 +25,23 @@ interface CreateTeamViewProps {
   onViewChange: (view: 'join' | 'create' | 'analyzing') => void;
 }
 
+const ROLES = ['Frontend', 'Backend', 'Fullstack', 'Data', 'PM', 'Design'];
+
 export function CreateTeamView({ onViewChange }: CreateTeamViewProps) {
   const [teamName, setTeamName] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const setTeamCode = useAuthStore((state) => state.setTeamCode);
 
   const handleCreate = async () => {
-    if (!teamName || !repoUrl) return;
+    if (!teamName || !repoUrl || !selectedRole) return;
     
     setIsLoading(true);
     setErrorMsg('');
     try {
-      const response = await spaceApi.createSpace({ name: teamName, repoUrl });
+      const response = await spaceApi.createSpace({ name: teamName, repoUrl, jobRole: selectedRole });
       setTeamCode(response.teamCode);
       onViewChange('analyzing');
     } catch (error: any) {
@@ -89,6 +92,25 @@ export function CreateTeamView({ onViewChange }: CreateTeamViewProps) {
             className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-900/10 focus:border-gray-900 transition-colors"
           />
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Your Role</label>
+          <div className="flex flex-wrap gap-2">
+            {ROLES.map((role) => (
+              <button
+                key={role}
+                onClick={() => setSelectedRole(role)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  selectedRole === role
+                    ? 'bg-gray-900 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {role}
+              </button>
+            ))}
+          </div>
+        </div>
         
         {errorMsg && (
           <p className="text-sm text-red-500 font-medium animate-fade-in-up">{errorMsg}</p>
@@ -98,7 +120,7 @@ export function CreateTeamView({ onViewChange }: CreateTeamViewProps) {
       <div className="mt-6 pt-6 border-t border-gray-100 flex flex-col space-y-4">
         <button
           onClick={handleCreate}
-          disabled={!teamName || !repoUrl || isLoading}
+          disabled={!teamName || !repoUrl || !selectedRole || isLoading}
           className="w-full flex items-center justify-center space-x-2 bg-gray-900 text-white px-4 py-3 rounded-xl hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
         >
           {isLoading ? (

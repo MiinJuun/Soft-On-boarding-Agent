@@ -14,6 +14,7 @@ const getAuthHeaders = () => {
 export interface CreateSpaceRequest {
   name: string;
   repoUrl: string;
+  jobRole: string;
 }
 
 export interface CreateSpaceResponse {
@@ -37,16 +38,28 @@ export const spaceApi = {
     return response.json();
   },
 
-  joinSpace: async (teamCode: string): Promise<void> => {
+  joinSpace: async (teamCode: string, jobRole: string): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/api/spaces/join`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ teamCode }),
+      body: JSON.stringify({ teamCode, jobRole }),
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || '팀 스페이스 참여에 실패했습니다.');
+    }
+  },
+
+  leaveSpace: async (): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/api/spaces/leave`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || '팀 탈퇴에 실패했습니다.');
     }
   },
 };
