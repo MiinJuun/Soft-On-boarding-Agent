@@ -1,0 +1,24 @@
+# =====================================================================
+# [현업 표준] 로컬 개발 전용 설정 파일
+# 이 파일은 .gitignore에 등록되어 절대 GitHub에 올라가지 않습니다.
+# 팀원에게 직접 공유(슬랙/노션 등)하거나, 각자 직접 채워서 사용하세요.
+# =====================================================================
+
+spring:
+  datasource:
+    url: jdbc:postgresql://aws-1-ap-south-1.pooler.supabase.com:6543/postgres?prepareThreshold=0
+    username: postgres.bewkjysjcqdmxyfralnb
+    password: rlaehdwns069@
+
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: Ov23liw27qobeLGpln72
+            client-secret: ffa60c6b12e4ac02be018c255d62b689a71a1e26
+
+app:
+  jwt:
+    secret: ZSmjUH0174/zj1FJ2moHJCYZ/N/MUrUxDA0r1RucihdeTgo1SZ1521FHsXmdVw/LwKSjSsRrL8VYJWTmGohnEQ==
+    expiration-time: 86400000
