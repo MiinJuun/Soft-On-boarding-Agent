@@ -27,7 +27,7 @@ export const userApi = {
       ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
       : getAuthHeaders();
 
-    const response = await fetch(`${API_BASE_URL}/users/me`, {
+    const response = await fetch(`${API_BASE_URL}/api/users/me`, {
       method: 'GET',
       headers,
     });

@@ -30,6 +30,7 @@ spring:
 app:
   github:
     api-url: https://api.github.com
+    system-token: dummy-token
   llm:
     api-url: ""
     api-key: ""
