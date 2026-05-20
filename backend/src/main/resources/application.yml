@@ -29,6 +29,7 @@ spring:
 app:
   github:
     api-url: https://api.github.com
+    system-token: ${GITHUB_SYSTEM_TOKEN:}
   llm:
     api-url: ${LLM_API_URL:}
     api-key: ${LLM_API_KEY:}
