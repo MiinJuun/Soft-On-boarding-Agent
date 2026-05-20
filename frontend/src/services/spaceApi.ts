@@ -62,4 +62,18 @@ export const spaceApi = {
       throw new Error(errorData.message || '팀 탈퇴에 실패했습니다.');
     }
   },
+
+  getCommits: async (teamCode: string): Promise<any[]> => {
+    const response = await fetch(`${API_BASE_URL}/api/spaces/${teamCode}/commits`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || '커밋 내역을 불러오는데 실패했습니다.');
+    }
+
+    return response.json();
+  },
 };

@@ -52,23 +52,7 @@ public class GithubFileFetchService {
                 .block();
     }
 
-    /**
-     * 개별 커밋 Diff 호출
-     */
-    public String fetchCommitDiff(String owner, String repo, String commitSha) {
-        log.info("Fetching diff for {}/{} commit {}", owner, repo, commitSha);
-        try {
-            return webClient.get()
-                    .uri("/repos/{owner}/{repo}/commits/{sha}", owner, repo, commitSha)
-                    .header("Accept", "application/vnd.github.v3.diff")
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
-        } catch (Exception e) {
-            log.error("Failed to fetch diff for commit {}: {}", commitSha, e.getMessage());
-            return "";
-        }
-    }
+
 
     /**
      * GitHub API 호출하여 파일 내용을 가져옵니다. (DataViewService 연동용)

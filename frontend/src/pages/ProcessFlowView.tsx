@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { spaceApi } from '../services/spaceApi';
+import { useAuthStore } from '../store/authStore';
 import {
     CheckCircle2,
     Circle,
@@ -30,6 +32,7 @@ interface Issue {
     role: RoleType;
     assignee: string;
     avatarUrl: string;
+    commitDate?: string;
 }
 
 // --- Dummy Data ---
@@ -40,14 +43,7 @@ const dummyReleases: Release[] = [
     { id: 4, name: 'v1.2.0 (RC)', date: 'May 20', type: 'release', completedTasks: 1, totalTasks: 20 },
 ];
 
-const dummyIssues: Issue[] = [
-    { id: 'SYS-101', releaseId: 3, title: 'Process Flow View 칸반 보드 레이아웃 구현', status: 'Done', role: 'Frontend', assignee: 'Minjun', avatarUrl: 'https://i.pravatar.cc/150?u=minjun' },
-    { id: 'SYS-102', releaseId: 3, title: '릴리즈 히스토리 조회 API 연동', status: 'In Progress', role: 'Backend', assignee: 'Alex', avatarUrl: 'https://i.pravatar.cc/150?u=alex' },
-    { id: 'SYS-103', releaseId: 3, title: '이슈 카드 드래그 앤 드롭 애니메이션', status: 'Todo', role: 'Frontend', assignee: 'Minjun', avatarUrl: 'https://i.pravatar.cc/150?u=minjun' },
-    { id: 'SYS-104', releaseId: 3, title: 'DB 스키마 마이그레이션 스크립트 작성', status: 'Done', role: 'Backend', assignee: 'Alex', avatarUrl: 'https://i.pravatar.cc/150?u=alex' },
-    { id: 'SYS-105', releaseId: 3, title: '온보딩 대시보드 공통 컴포넌트 디자인', status: 'Done', role: 'Design', assignee: 'Sam', avatarUrl: 'https://i.pravatar.cc/150?u=sam' },
-    { id: 'SYS-106', releaseId: 3, title: '스테이징 서버 CI/CD 파이프라인 수정', status: 'In Progress', role: 'DevOps', assignee: 'Chris', avatarUrl: 'https://i.pravatar.cc/150?u=chris' },
-];
+// --- Dummy Data (Issues removed, fetched from API) ---
 
 const ROLES: ('All' | RoleType)[] = ['All', 'Frontend', 'Backend', 'DevOps', 'Design'];
 
@@ -70,11 +66,48 @@ const getStatusIcon = (status: IssueStatus) => {
 };
 
 export function ProcessFlowView() {
+    const { user } = useAuthStore();
+    const [issues, setIssues] = useState<Issue[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
     const [selectedReleaseId, setSelectedReleaseId] = useState<number>(dummyReleases[2].id);
     const [selectedRole, setSelectedRole] = useState<'All' | RoleType>('All');
 
+    useEffect(() => {
+        const fetchCommits = async () => {
+            if (!user?.teamCode) return;
+            
+            try {
+                setIsLoading(true);
+                const commits = await spaceApi.getCommits(user.teamCode);
+                
+                const mappedIssues: Issue[] = commits.map((commit, index) => {
+                    const roles: RoleType[] = ['Frontend', 'Backend', 'DevOps', 'Design'];
+                    
+                    return {
+                        id: commit.id.substring(0, 7),
+                        releaseId: 3,
+                        title: commit.title,
+                        status: 'Done' as IssueStatus,
+                        role: roles[index % roles.length],
+                        assignee: commit.assignee,
+                        avatarUrl: `https://i.pravatar.cc/150?u=${commit.assignee}`,
+                        commitDate: new Date(commit.commitDate).toLocaleString(),
+                    };
+                });
+                
+                setIssues(mappedIssues);
+            } catch (error) {
+                console.error("Failed to fetch commits:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchCommits();
+    }, [user?.teamCode]);
+
     // Filter logic
-    const filteredIssues = dummyIssues.filter(issue =>
+    const filteredIssues = issues.filter(issue =>
         issue.releaseId === selectedReleaseId &&
         (selectedRole === 'All' || issue.role === selectedRole)
     );
@@ -85,6 +118,15 @@ export function ProcessFlowView() {
         'In Progress': filteredIssues.filter(i => i.status === 'In Progress'),
         'Done': filteredIssues.filter(i => i.status === 'Done'),
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full bg-[#FAFAFA]">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mb-4"></div>
+                <p className="text-gray-600 font-medium">데이터 동기화 중...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-[#FAFAFA]">
@@ -207,6 +249,9 @@ export function ProcessFlowView() {
                                                 <img src={issue.avatarUrl} alt="avatar" className="w-6 h-6 rounded-full border-2 border-white shadow-sm" />
                                                 <span className="text-xs font-medium text-gray-600">{issue.assignee}</span>
                                             </div>
+                                            {issue.commitDate && (
+                                                <span className="text-[10px] text-gray-400">{issue.commitDate}</span>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
