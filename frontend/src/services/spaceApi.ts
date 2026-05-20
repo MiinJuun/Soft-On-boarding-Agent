@@ -23,7 +23,7 @@ export interface CreateSpaceResponse {
 
 export const spaceApi = {
   createSpace: async (data: CreateSpaceRequest): Promise<CreateSpaceResponse> => {
-    const response = await fetch(`${API_BASE_URL}/spaces`, {
+    const response = await fetch(`${API_BASE_URL}/api/spaces`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
@@ -38,7 +38,7 @@ export const spaceApi = {
   },
 
   joinSpace: async (teamCode: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/spaces/join`, {
+    const response = await fetch(`${API_BASE_URL}/api/spaces/join`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ teamCode }),

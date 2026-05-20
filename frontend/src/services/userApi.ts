@@ -23,11 +23,11 @@ export interface UserProfile {
 export const userApi = {
   getMe: async (token?: string): Promise<UserProfile> => {
     // 만약 파라미터로 토큰을 직접 넘기면 그 토큰을 사용 (로그인 직후 store 업데이트 전일 수 있음)
-    const headers = token 
+    const headers = token
       ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
       : getAuthHeaders();
 
-    const response = await fetch(`${API_BASE_URL}/users/me`, {
+    const response = await fetch(`${API_BASE_URL}/api/users/me`, {
       method: 'GET',
       headers,
     });

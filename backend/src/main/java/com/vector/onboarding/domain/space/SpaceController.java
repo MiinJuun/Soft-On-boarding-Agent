@@ -33,7 +33,12 @@ public class SpaceController {
 
         Long userId = Long.valueOf(userDetails.getUsername());
         CreateSpaceResponseDto response = spaceService.createSpace(userId, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        
+        // GitHub 커밋 및 파일 목록 비동기 로드 호출
+        spaceService.loadGithubCommitsAsync(response.getSpaceId(), request.getRepoUrl());
+        response.setMessage("분석 시작됨");
+        
+        return ResponseEntity.ok(response);
     }
 
     /**
