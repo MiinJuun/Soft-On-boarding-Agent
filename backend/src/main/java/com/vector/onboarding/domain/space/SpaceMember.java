@@ -41,15 +41,19 @@ public class SpaceMember {
     @Column(nullable = false)
     private SpaceMemberRole memberRole;
 
+    @Column(length = 50)
+    private String jobRole;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime joinedAt;
 
     @Builder
-    public SpaceMember(Long spaceId, Long userId, SpaceMemberRole memberRole) {
+    public SpaceMember(Long spaceId, Long userId, SpaceMemberRole memberRole, String jobRole) {
         this.spaceId = spaceId;
         this.userId = userId;
         this.memberRole = memberRole;
+        this.jobRole = jobRole;
     }
 
     /**

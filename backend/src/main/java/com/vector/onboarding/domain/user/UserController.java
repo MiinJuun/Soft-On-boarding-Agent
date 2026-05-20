@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     private final UserRepository userRepository;
+    private final UserService userService;
 
     @GetMapping("/me")
     public ResponseEntity<UserResponseDto> getMyInfo(@AuthenticationPrincipal UserDetails userDetails) {
@@ -27,5 +28,17 @@ public class UserController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         return ResponseEntity.ok(new UserResponseDto(user));
+    }
+
+    @GetMapping("/me/profile")
+    public ResponseEntity<com.vector.onboarding.domain.user.dto.UserProfileResponseDto> getMyProfile(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        Long userId = Long.valueOf(userDetails.getUsername());
+        com.vector.onboarding.domain.user.dto.UserProfileResponseDto response = userService.getUserProfile(userId);
+
+        return ResponseEntity.ok(response);
     }
 }

@@ -50,7 +50,24 @@ public class SpaceController {
             @Valid @RequestBody JoinSpaceRequestDto request) {
 
         Long userId = Long.valueOf(userDetails.getUsername());
-        spaceService.joinSpace(userId, request.getTeamCode());
+        spaceService.joinSpace(userId, request.getTeamCode(), request.getJobRole());
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 팀 코드를 null로 만들고 팀에서 탈퇴합니다.
+     * POST /api/spaces/leave
+     *
+     * @param userDetails 현재 로그인한 유저 (JWT 인증 필요)
+     * @return 200 OK (성공)
+     */
+    @PostMapping("/leave")
+    public ResponseEntity<Void> leaveSpace(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        Long userId = Long.valueOf(userDetails.getUsername());
+        spaceService.leaveSpace(userId);
         return ResponseEntity.ok().build();
     }
 }

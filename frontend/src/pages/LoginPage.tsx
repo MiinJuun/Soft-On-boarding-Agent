@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { userApi } from '../services/userApi';
-import { Loader2 } from 'lucide-react';
 
 const GITHUB_LOGIN_URL = `${import.meta.env.VITE_API_BASE_URL}/oauth2/authorization/github`;
 
@@ -28,13 +27,11 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { login, isAuthenticated, user } = useAuthStore();
-  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
     const token = searchParams.get('token');
 
     const verifyAndRedirect = async (authToken: string) => {
-      setIsVerifying(true);
       try {
         const userProfile = await userApi.getMe(authToken);
         login(authToken, { teamCode: userProfile.teamCode });
@@ -48,8 +45,6 @@ export function LoginPage() {
         console.error('Failed to verify user:', error);
         login(authToken, { teamCode: null });
         navigate('/onboarding', { replace: true });
-      } finally {
-        setIsVerifying(false);
       }
     };
 

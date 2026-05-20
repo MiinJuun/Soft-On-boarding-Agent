@@ -53,6 +53,7 @@ public class SpaceService {
                 .spaceId(savedSpace.getId())
                 .userId(userId)
                 .memberRole(SpaceMemberRole.ADMIN)
+                .jobRole(dto.getJobRole())
                 .build();
         spaceMemberRepository.save(adminMember);
 
@@ -71,7 +72,7 @@ public class SpaceService {
      * teamCode를 통해 팀 스페이스에 참여합니다.
      * 존재하지 않는 코드일 경우 {@link SpaceNotFoundException}을 던집니다.
      */
-    public void joinSpace(Long userId, String teamCode) {
+    public void joinSpace(Long userId, String teamCode, String jobRole) {
         Space space = spaceRepository.findByTeamCode(teamCode)
                 .orElseThrow(() -> new SpaceNotFoundException(teamCode));
 
@@ -87,6 +88,7 @@ public class SpaceService {
                 .spaceId(space.getId())
                 .userId(userId)
                 .memberRole(SpaceMemberRole.MEMBER)
+                .jobRole(jobRole)
                 .build();
         spaceMemberRepository.save(member);
 
@@ -95,6 +97,50 @@ public class SpaceService {
         userRepository.save(user);
 
         log.info("Space 참여 완료. userId={}, spaceId={}, teamCode={}", userId, space.getId(), teamCode);
+    }
+
+    /**
+     * 팀 스페이스에서 탈퇴합니다.
+     */
+    public void leaveSpace(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+
+        String teamCode = user.getTeamCode();
+        if (teamCode == null || teamCode.isEmpty()) {
+            throw new IllegalStateException("소속된 팀이 없습니다.");
+        }
+
+        Space space = spaceRepository.findByTeamCode(teamCode)
+                .orElseThrow(() -> new SpaceNotFoundException(teamCode));
+
+        SpaceMember currentMember = spaceMemberRepository.findBySpaceIdAndUserId(space.getId(), userId)
+                .orElseThrow(() -> new RuntimeException("SpaceMember mapping not found"));
+
+        if (currentMember.getMemberRole() == SpaceMemberRole.ADMIN) {
+            java.util.List<SpaceMember> members = spaceMemberRepository.findAllBySpaceId(space.getId());
+            if (members.size() == 1) {
+                // 혼자라면 팀 해체
+                spaceMemberRepository.delete(currentMember);
+                spaceRepository.delete(space);
+            } else {
+                // 다른 팀원이 있다면 가장 먼저 가입한 멤버에게 ADMIN 위임
+                SpaceMember nextAdmin = members.stream()
+                        .filter(m -> !m.getUserId().equals(userId))
+                        .min(java.util.Comparator.comparing(SpaceMember::getJoinedAt))
+                        .orElseThrow(() -> new RuntimeException("위임할 대상이 없습니다."));
+                
+                nextAdmin.changeRole(SpaceMemberRole.ADMIN);
+                spaceMemberRepository.save(nextAdmin);
+                spaceMemberRepository.delete(currentMember);
+            }
+        } else {
+            // 일반 멤버는 즉시 탈퇴
+            spaceMemberRepository.delete(currentMember);
+        }
+
+        user.updateTeamCode(null);
+        // userRepository.save(user) is not strictly necessary due to dirty checking but safe.
     }
 
     /**

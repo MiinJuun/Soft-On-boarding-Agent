@@ -20,6 +20,18 @@ export interface UserProfile {
   role: string;
 }
 
+export interface UserProfileResponse {
+  userName: string;
+  userEmail: string | null;
+  role: string;
+  teamInfo: {
+    teamName: string;
+    teamCode: string;
+    repoUrl: string;
+    createdAt: string;
+  } | null;
+}
+
 export const userApi = {
   getMe: async (token?: string): Promise<UserProfile> => {
     // 만약 파라미터로 토큰을 직접 넘기면 그 토큰을 사용 (로그인 직후 store 업데이트 전일 수 있음)
@@ -34,6 +46,19 @@ export const userApi = {
 
     if (!response.ok) {
       throw new Error('유저 정보를 가져오는데 실패했습니다.');
+    }
+
+    return response.json();
+  },
+
+  getProfile: async (): Promise<UserProfileResponse> => {
+    const response = await fetch(`${API_BASE_URL}/api/users/me/profile`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error('마이페이지 프로필 정보를 가져오는데 실패했습니다.');
     }
 
     return response.json();
