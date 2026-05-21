@@ -6,6 +6,7 @@ import com.vector.onboarding.domain.space.dto.CreateBoardTaskRequestDto;
 import com.vector.onboarding.domain.space.dto.CreateSpaceRequestDto;
 import com.vector.onboarding.domain.space.dto.CreateSpaceResponseDto;
 import com.vector.onboarding.domain.space.dto.JoinSpaceRequestDto;
+import com.vector.onboarding.domain.space.dto.UpdateTaskStatusRequestDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -73,6 +74,7 @@ public class SpaceController {
 
     /**
      * 특정 팀 코드의 GitHub 커밋 내역을 가져옵니다.
+     * DB에 없으면 자동으로 온디맨드 동기화합니다.
      * GET /api/spaces/{teamCode}/commits
      */
     @GetMapping("/{teamCode}/commits")
@@ -80,6 +82,23 @@ public class SpaceController {
             @PathVariable String teamCode) {
 
         List<CommitHistoryResponseDto> response = spaceService.getCommitsByTeamCode(teamCode)
+                .stream()
+                .map(CommitHistoryResponseDto::from)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 특정 팀 코드의 커밋을 GitHub에서 강제 재동기화합니다.
+     * 스페이스 전환 시 최신 커밋이 필요할 때 호출합니다.
+     * POST /api/spaces/{teamCode}/commits/sync
+     */
+    @PostMapping("/{teamCode}/commits/sync")
+    public ResponseEntity<List<CommitHistoryResponseDto>> syncCommits(
+            @PathVariable String teamCode) {
+
+        List<CommitHistoryResponseDto> response = spaceService.syncCommitsByTeamCode(teamCode)
                 .stream()
                 .map(CommitHistoryResponseDto::from)
                 .collect(Collectors.toList());
@@ -130,6 +149,20 @@ public class SpaceController {
             @Valid @RequestBody CreateBoardTaskRequestDto request) {
 
         BoardTask updated = spaceService.updateTask(taskId, request);
+        return ResponseEntity.ok(BoardTaskResponseDto.from(updated));
+    }
+
+    /**
+     * 태스크 상태만 변경합니다. (체크박스 클릭 → IN_PROGRESS 등)
+     * PATCH /api/spaces/{teamCode}/tasks/{taskId}/status
+     */
+    @PatchMapping("/{teamCode}/tasks/{taskId}/status")
+    public ResponseEntity<BoardTaskResponseDto> updateTaskStatus(
+            @PathVariable String teamCode,
+            @PathVariable Long taskId,
+            @Valid @RequestBody UpdateTaskStatusRequestDto request) {
+
+        BoardTask updated = spaceService.updateTaskStatus(taskId, request.getStatus());
         return ResponseEntity.ok(BoardTaskResponseDto.from(updated));
     }
 

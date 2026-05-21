@@ -215,6 +215,7 @@ public class SpaceService {
                     String dateStr = commitNode.get("commit").get("author").get("date").asText();
                     
                     CommitHistory history = CommitHistory.builder()
+                            .spaceId(spaceId)   // 팀 격리 키
                             .repoName(repo)
                             .commitSha(sha)
                             .message(message)
@@ -269,19 +270,99 @@ public class SpaceService {
 
     /**
      * 특정 팀 코드의 커밋 내역을 반환합니다.
+     * DB에 해당 spaceId의 커밋이 없으면 spaces 테이블의 repo_url을 기반으로
+     * GitHub에서 자동 동기화한 뒤 반환합니다. (온디맨드 동기화)
      */
+    @Transactional
     public List<CommitHistory> getCommitsByTeamCode(String teamCode) {
         Space space = spaceRepository.findByTeamCode(teamCode)
                 .orElseThrow(() -> new SpaceNotFoundException(teamCode));
-                
-        String urlPath = space.getRepoUrl().replace("https://github.com/", "").replace(".git", "");
-        String[] parts = urlPath.split("/");
-        if (parts.length < 2) {
+
+        List<CommitHistory> existing = commitHistoryRepository.findBySpaceIdOrderByIdDesc(space.getId());
+
+        // DB에 커밋이 없으면 → repo_url 기반으로 온디맨드 동기화
+        if (existing.isEmpty() && space.getRepoUrl() != null && !space.getRepoUrl().isBlank()) {
+            log.info("[온디맨드 동기화] spaceId={} 커밋 없음. repo_url={} 에서 fetch 시도",
+                    space.getId(), space.getRepoUrl());
+            existing = syncCommitsFromGithub(space);
+        }
+
+        return existing;
+    }
+
+    /**
+     * 특정 팀 코드의 커밋을 GitHub에서 강제 재동기화합니다.
+     * 기존 커밋은 삭제 후 최신 데이터로 교체합니다.
+     * POST /api/spaces/{teamCode}/commits/sync 에서 호출됩니다.
+     */
+    @Transactional
+    public List<CommitHistory> syncCommitsByTeamCode(String teamCode) {
+        Space space = spaceRepository.findByTeamCode(teamCode)
+                .orElseThrow(() -> new SpaceNotFoundException(teamCode));
+
+        if (space.getRepoUrl() == null || space.getRepoUrl().isBlank()) {
+            log.warn("[재동기화] spaceId={} 에 repo_url 없음. 건너뜁니다.", space.getId());
             return java.util.Collections.emptyList();
         }
-        String repo = parts[1];
-        
-        return commitHistoryRepository.findByRepoName(repo);
+
+        // 기존 커밋 삭제 (덮어쓰기)
+        List<CommitHistory> old = commitHistoryRepository.findBySpaceIdOrderByIdDesc(space.getId());
+        if (!old.isEmpty()) {
+            commitHistoryRepository.deleteAll(old);
+            log.info("[재동기화] 기존 커밋 {}건 삭제", old.size());
+        }
+
+        return syncCommitsFromGithub(space);
+    }
+
+    /**
+     * 내부 공통 메서드: Space 엔티티를 받아 GitHub에서 커밋을 fetch하고 저장 후 반환합니다.
+     */
+    private List<CommitHistory> syncCommitsFromGithub(Space space) {
+        String repoUrl = space.getRepoUrl();
+        String urlPath = repoUrl.replace("https://github.com/", "").replace(".git", "");
+        String[] parts = urlPath.split("/");
+        if (parts.length < 2) {
+            log.error("잘못된 repo_url 형식: {}", repoUrl);
+            return java.util.Collections.emptyList();
+        }
+        String owner = parts[0];
+        String repo  = parts[1];
+
+        try {
+            com.fasterxml.jackson.databind.JsonNode commits =
+                    githubFileFetchService.fetchCommits(owner, repo);
+
+            if (commits == null || !commits.isArray() || commits.size() == 0) {
+                log.info("[동기화] GitHub 커밋 없음 - owner={}, repo={}", owner, repo);
+                return java.util.Collections.emptyList();
+            }
+
+            List<CommitHistory> histories = new ArrayList<>();
+            for (com.fasterxml.jackson.databind.JsonNode node : commits) {
+                String sha     = node.get("sha").asText();
+                String message = node.get("commit").get("message").asText();
+                String author  = node.get("commit").get("author").get("name").asText();
+                String date    = node.get("commit").get("author").get("date").asText();
+
+                histories.add(CommitHistory.builder()
+                        .spaceId(space.getId())
+                        .repoName(repo)
+                        .commitSha(sha)
+                        .message(message)
+                        .commitDate(date)
+                        .author(author)
+                        .build());
+            }
+
+            List<CommitHistory> saved = commitHistoryRepository.saveAll(histories);
+            log.info("[동기화] {}건 저장 완료 - spaceId={}", saved.size(), space.getId());
+            return commitHistoryRepository.findBySpaceIdOrderByIdDesc(space.getId());
+
+        } catch (Exception e) {
+            log.error("[동기화] GitHub fetch 실패: {}", e.getMessage(), e);
+            return java.util.Collections.emptyList();
+        }
     }
 
     // =====================================================================
@@ -317,13 +398,23 @@ public class SpaceService {
     }
 
     /**
-     * 태스크를 수정합니다.
+     * 태스크 전체 필드를 수정합니다.
      */
     public BoardTask updateTask(Long taskId, CreateBoardTaskRequestDto dto) {
         BoardTask task = boardTaskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found: " + taskId));
         task.update(dto.getTitle(), dto.getStatus(), dto.getAssignee(), dto.getLabel());
         return task; // dirty checking으로 자동 반영
+    }
+
+    /**
+     * 태스크 상태만 변경합니다. (체크박스 클릭 → IN_PROGRESS 이동 등)
+     */
+    public BoardTask updateTaskStatus(Long taskId, BoardTaskStatus newStatus) {
+        BoardTask task = boardTaskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found: " + taskId));
+        task.update(null, newStatus, null, null);
+        return task;
     }
 
     /**
